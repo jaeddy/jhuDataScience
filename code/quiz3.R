@@ -12,8 +12,8 @@ data(iris)
 ## There will be an object called 'iris' in your workspace. In this dataset, 
 ## what is the mean of 'Sepal.Length' for the species virginica? 
 ## (Please only enter the numeric result and nothing else.)
-Sepal.Length.mean <- mean(iris$Sepal.Length)
-
+species.Sepal.Length.mean <- tapply(iris$Sepal.Length, iris$Species, mean)
+species.Sepal.Length.mean["virginica"]
 
 ## Question 2: Continuing with the 'iris' dataset from the previous Question, 
 ## what R code returns a vector of the means of the variables 'Sepal.Length', 
@@ -39,7 +39,8 @@ cyl.mpg.means <- tapply(mtcars$mpg, mtcars$cyl, mean)
 ## Question 4: Continuing with the 'mtcars' dataset from the previous Question, 
 ## what is the absolute difference between the average horsepower of 4-cylinder 
 ## cars and the average horsepower of 8-cylinder cars?
-mpg.diff <- abs(cyl.mpg.means["4"] - cyl.mpg.means["8"])
+cyl.hp.means <- tapply(mtcars$hp, mtcars$cyl, mean)
+hp.diff <- abs(cyl.hp.means["4"] - cyl.hp.means["8"])
 
 
 ## Question 5: If you run
