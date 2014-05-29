@@ -6,12 +6,12 @@ rankhospital <- function(state, outcome, num = "best") {
   
   ## Check that state, outcome, and num arguments are valid
   if(!(state %in% outcomeDat$State)){
-    error("invalid state")
+    stop("invalid state")
   }
   
   possibleOutcomes <- c("heart attack", "heart failure", "pneumonia")
   if(!(outcome %in% possibleOutcomes)){
-    error("invalid outcome")
+    stop("invalid outcome")
   }
   
   possibleNums <- c("best", "worst")

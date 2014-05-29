@@ -6,12 +6,12 @@ best <- function(state, outcome) {
   
   ## Check that state and outcome are valid
   if(!(state %in% outcomeDat$State)){
-    error("invalid state")
+    stop("invalid state")
   }
   
   possibleOutcomes <- c("heart attack", "heart failure", "pneumonia")
   if(!(outcome %in% possibleOutcomes)){
-    error("invalid outcome")
+    stop("invalid outcome")
   }
   
   ## Reformat outcome string and column names to identify relevant outcome 

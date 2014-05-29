@@ -7,17 +7,17 @@ rankall <- function(outcome, num = "best") {
   ## Check that outcome and num arguments are valid
   possibleOutcomes <- c("heart attack", "heart failure", "pneumonia")
   if(!(outcome %in% possibleOutcomes)){
-    message("error: invalid outcome")
+    stop("invalid outcome")
   }
   
   possibleNums <- c("best", "worst")
   if(is.character(num)){
     if(!(num %in% possibleNums)){
-      message("error: invalid num")
+      stop("invalid num")
     }
   } else {
     if(num == 0){
-      message("error: invalid num")
+      stop("invalid num")
     }
   }
   
