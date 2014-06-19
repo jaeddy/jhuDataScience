@@ -1,5 +1,5 @@
 
-# Code for Quiz 1
+# Code for Quiz 2
 
 # Question 1: Register an application with the Github API here 
 # https://github.com/settings/applications. Access the API to get information 
