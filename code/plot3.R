@@ -58,10 +58,18 @@ powerDat <- powerDat[(startLine-1):endLine, ]
 library(dplyr)
 powerDat <- mutate(powerDat, datetime = dmy_hms(paste(Date, Time)))
 
-# Make plot 1
-png("figure/plot1.png")
-with(powerDat, hist(Global_active_power, col = "red", 
-                    xlab = "Global Active Power (kilowatts)",
-                    main = "Global Active Power"))
+# Make plot 3
+png("figure/plot3.png")
+with(powerDat, {
+    plot(datetime, Sub_metering_1,
+         type = "n",
+         ylab = "Energy sub metering",
+         xlab = "")
+    lines(datetime, Sub_metering_1)
+})
+with(powerDat, lines(datetime, Sub_metering_2, col = "red"))
+with(powerDat, lines(datetime, Sub_metering_3, col = "blue"))
+legend("topright", lty = 1, col = c("black", "red", "blue"),
+       legend = c("Sub_metering_1", "Sub_metering_2", "Sub_metering_3"))
 dev.off()
 
