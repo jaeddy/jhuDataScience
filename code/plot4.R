@@ -58,15 +58,38 @@ powerDat <- powerDat[(startLine-1):endLine, ]
 library(dplyr)
 powerDat <- mutate(powerDat, datetime = dmy_hms(paste(Date, Time)))
 
-# Make plot 2
-png("figure/plot2.png")
-par(bg = "transparent")
+# Make plot 4
+png("figure/plot4.png")
+par(mfrow = c(2, 2), bg = "transparent")
 with(powerDat, {
+    # panel 1 (top left)
     plot(datetime, Global_active_power,
          type = "n",
-         ylab = "Global Active Power (kilowatts)",
+         ylab = "Global Active Power",
          xlab = "")
     lines(datetime, Global_active_power)
-    })
+    
+    # panel 2 (top right)
+    plot(datetime, Voltage,
+         type = "n",
+         ylab = "Voltage")
+    lines(datetime, Voltage)
+    
+    # panel 3 (bottom left)
+    plot(datetime, Sub_metering_1,
+         type = "n",
+         ylab = "Energy sub metering",
+         xlab = "")
+    lines(datetime, Sub_metering_1)
+    lines(datetime, Sub_metering_2, col = "red")
+    lines(datetime, Sub_metering_3, col = "blue")
+    legend("topright", bty = "n", lty = 1, col = c("black", "red", "blue"),
+           legend = c("Sub_metering_1", "Sub_metering_2", "Sub_metering_3"))
+    
+    # panel 4 (bottom right)
+    plot(datetime, Global_reactive_power,
+         type = "n")
+    lines(datetime, Global_reactive_power)
+})
 dev.off()
 

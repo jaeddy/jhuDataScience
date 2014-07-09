@@ -60,16 +60,17 @@ powerDat <- mutate(powerDat, datetime = dmy_hms(paste(Date, Time)))
 
 # Make plot 3
 png("figure/plot3.png")
+par(bg = "transparent")
 with(powerDat, {
     plot(datetime, Sub_metering_1,
          type = "n",
          ylab = "Energy sub metering",
          xlab = "")
     lines(datetime, Sub_metering_1)
+    lines(datetime, Sub_metering_2, col = "red")
+    lines(datetime, Sub_metering_3, col = "blue")
+    legend("topright", lty = 1, col = c("black", "red", "blue"),
+           legend = c("Sub_metering_1", "Sub_metering_2", "Sub_metering_3"))
 })
-with(powerDat, lines(datetime, Sub_metering_2, col = "red"))
-with(powerDat, lines(datetime, Sub_metering_3, col = "blue"))
-legend("topright", lty = 1, col = c("black", "red", "blue"),
-       legend = c("Sub_metering_1", "Sub_metering_2", "Sub_metering_3"))
 dev.off()
 

@@ -60,6 +60,7 @@ powerDat <- mutate(powerDat, datetime = dmy_hms(paste(Date, Time)))
 
 # Make plot 1
 png("figure/plot1.png")
+par(bg = "transparent")
 with(powerDat, hist(Global_active_power, col = "red", 
                     xlab = "Global Active Power (kilowatts)",
                     main = "Global Active Power"))
