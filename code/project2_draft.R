@@ -35,12 +35,17 @@ library(dplyr)
 # Use dplyr functions to sum the emission across all sources for each year
 annualEmissions <- NEI %>% 
     group_by(year) %>% 
-    summarise(Emissions = sum(Emissions))
+    summarise(num_Observations = length(Emissions),
+              Emissions = sum(Emissions))
 
+par(mfrow = c(2, 1), bg = "transparent")
 with(annualEmissions, {
     plot(year, Emissions, col = "blue", 
          main = "Total emissions per year")
     lines(year, Emissions, lty = 2)
+    plot(year, num_Emissions, col = "blue", 
+         main = "Number of observations per year")
+    lines(year, num_Emissions, lty = 2)
     })
 dev.off()
 
@@ -69,14 +74,22 @@ dev.off()
 library(ggplot2)
 
 bmoreEmissions <- NEI %>% 
-    filter(fips == "24510") %>% 
+    filter(fips == "24510") %>%
     group_by(year, type) %>%
-    summarise(Emissions = sum(Emissions))
+    summarise(total_Emissions = sum(Emissions),
+           mean_Emissions = mean(Emissions),
+           median_Emissions = median(Emissions),
+           se_Emissions = sd(Emissions)/sqrt(length(Emissions)))
 
-p <- ggplot(bmoreEmissions, aes(year, Emissions)) +
-    geom_point() +
-    stat_smooth(method = "lm") + 
-    facet_wrap(~ type)
+limits <- aes(ymin = mean_Emissions - se_Emissions,
+              ymax = mean_Emissions + se_Emissions)
+
+p <- ggplot(bmoreEmissions, aes(factor(year), mean_Emissions, 
+                                colour = total_Emissions)) +
+    geom_point(aes(size = median_Emissions)) +
+    geom_line(aes(group = 1)) +
+    geom_errorbar(limits, width = 0.2) + 
+    facet_wrap(~ type, scales = "free")
 p
 
 
@@ -89,11 +102,19 @@ coalSCC <- SCC[coalSources, ]
 coalAnnualEmissions <- NEI %>%
     filter(SCC %in% coalSCC$SCC) %>%
     group_by(year) %>%
-    summarise(Emissions = sum(Emissions))
+    summarise(total_Emissions = sum(Emissions),
+              mean_Emissions = mean(Emissions),
+              median_Emissions = median(Emissions),
+              se_Emissions = sd(Emissions)/sqrt(length(Emissions)))
 
-p <- ggplot(coalAnnualEmissions, aes(year, Emissions)) +
-    geom_point() +
-    stat_smooth(method = "lm")
+limits <- aes(ymin = mean_Emissions - se_Emissions,
+              ymax = mean_Emissions + se_Emissions)
+
+p <- ggplot(coalAnnualEmissions, aes(factor(year), mean_Emissions, 
+                                   colour = total_Emissions)) +
+    geom_point(aes(size = median_Emissions)) +
+    geom_line(aes(group = 1)) +
+    geom_errorbar(limits, width = 0.2)
 p
 
 
@@ -106,24 +127,39 @@ mobileSCC <- SCC[mobileSources, ]
 mobileBmoreAnnualEmissions <- NEI %>%
     filter(SCC %in% mobileSCC$SCC, fips == "24510") %>%
     group_by(year) %>%
-    summarise(Emissions = sum(Emissions))
+    summarise(total_Emissions = sum(Emissions),
+              mean_Emissions = mean(Emissions),
+              median_Emissions = median(Emissions),
+              se_Emissions = sd(Emissions)/sqrt(length(Emissions)))
 
-p  <- ggplot(mobileBmoreAnnualEmissions, aes(year, Emissions)) +
-    geom_point() + 
-    stat_smooth(method = "lm")
+limits <- aes(ymin = mean_Emissions - se_Emissions,
+              ymax = mean_Emissions + se_Emissions)
+
+p  <- ggplot(mobileBmoreAnnualEmissions, aes(factor(year), mean_Emissions, 
+                                            colour = total_Emissions)) +
+    geom_point(aes(size = median_Emissions)) +
+    geom_line(aes(group = 1)) +
+    geom_errorbar(limits, width = 0.2)
 p
 
 # 6. Compare emissions from motor vehicle sources in Baltimore City with
 # emissions from motor vehicle sources in Los Angeles County, California
 # (fips == "06037"). Which city has seen greater changes over time in motor
 # vehicle emissions?
+
 mobileCompAnnualEmissions <- NEI %>%
     filter(SCC %in% mobileSCC$SCC, fips %in% c("24510", "06037")) %>%
     group_by(year, fips) %>%
-    summarise(Emissions = sum(Emissions))
+    summarise(total_Emissions = sum(Emissions),
+              mean_Emissions = mean(Emissions),
+              median_Emissions = median(Emissions),
+              se_Emissions = sd(Emissions) / sqrt(length(Emissions)))
 
-p <- ggplot(mobileCompAnnualEmissions, aes(year, Emissions)) +
-    geom_point() + 
-    stat_smooth(method = "lm") +
-    facet_grid(. ~ fips)
+p <- ggplot(mobileCompAnnualEmissions, aes(factor(year), mean_Emissions, 
+                                           colour = total_Emissions)) +
+    geom_point(aes(size = median_Emissions)) +
+    geom_line(aes(group = 1)) +
+    geom_errorbar(limits, width = 0.2) +
+    scale_y_continuous()
+    facet_wrap(~ fips, scales = "free")
 p
