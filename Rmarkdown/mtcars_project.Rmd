@@ -2,13 +2,17 @@
 title: "Motor Trend mtcars Analysis"
 author: "James Eddy"
 date: "August 24, 2014"
-output: pdf_document
+output:
+  html_document:
+    theme: flatly
 ---
 
 ### Executive Summary
 
-The objective of this study was to investigate the following questions:
+The objective of this study was to investigate the following questions:  
+
 > “Is an automatic or manual transmission better for MPG”
+>
 > "Quantify the MPG difference between automatic and manual transmissions"
 
 After exploratory calculations and plotting to inspect apparent relationships
@@ -32,7 +36,7 @@ simple measure suggested that transmission type is only moderately correlated
 with MPG (0.60), while other values such as number of cylinders, displacement, 
 and weight might have more of an effect on gas mileage.
 
-```{r load, echo=FALSE}
+```{r load, echo=FALSE, results='hide', warning=FALSE, message=FALSE}
 library(dplyr)
 library(ggplot2)
 library(reshape2)
@@ -46,7 +50,7 @@ Before generating some exploratory plots, the `mutate()` function was used to
 append an additional column `transmission` (based on the `am` column) to the 
 `mtcars` data frame, making inspection of automatic vs. manual transmission 
 easier. Generating boxplots of MPG values for automatic and manual
-transmission cars provided a simple way to compare distributions (Figure 1).
+transmission cars provided a simple way to compare distributions (**Figure 1**).
 The difference in median MPG shown in the plots suggested that manual
 transmission cars are better for gas mileage than automatic transmission.
 While there was a pronounced difference in MPG between manual and automatic 
@@ -54,7 +58,7 @@ transmission cars, there may be other factors correlated with transmission
 that are more responsible for the difference in MPG. Several variables,
 including cylinder, displacement, rear axle ratio, weight, and number of gears
 all appear to have either positive or negative associations with transmission
-type (Figure 2). These variables represent potentially "confounding" factors,
+type (**Figure 2**). These variables represent potentially "confounding" factors,
 which need to be controlled for when modeling the influence of transmission 
 type on MPG.
 
@@ -64,7 +68,7 @@ mtcars <- mtcars %>%
     select(-am)
 ```
 
-### Modeling
+### Modeling & Diagnostics
 
 A simple model was first fit to directly measure the apparent influence of
 transmission on MPG. The first non-intercept coefficient of the model,
@@ -92,16 +96,16 @@ of 1000 lbs in car weight.
 
 Even with the four indepentent variables, the second model still only led to a
 moderately good R-squared value of 0.7687. Furthermore, a diagnostic plot of 
-residuals showed values non-evenly distributed around zero (Figure 3), 
+residuals showed values non-evenly distributed around zero (**Figure 3**), 
 indicating that the model is probably not very good. To examine whether adding 
 additional variables could improve predictability, a third model was fit based 
 on all variables in the data set. While R-squared was improved (0.869), the
-plot of residuals was still somewhat uneven. It is possible that too many
-variables are included in this case, which might hurt the model; alternatively,
-there may be interaction among some variables, which could be modeled more
-explicitly to improve performance. As the objective of this assignment was to
-explore the effect of transmission type on MPG, further optimization of a model
-for MPG prediction was not pursued here.
+plot of residuals was still somewhat uneven (**Figure 4**). It is possible that
+too many variables are included in this case, which might hurt the model; 
+alternatively, there may be interaction among some variables, which could be 
+modeled more explicitly to improve performance. As the objective of this 
+assignment was to explore the effect of transmission type on MPG, further 
+optimization of a model for MPG prediction was not pursued here.
 
 ```{r model2, echo=FALSE}
 fm2 <- formula(mpg ~ transmission + drat + wt + gear)
@@ -113,29 +117,36 @@ fmAll <- formula(mpg ~ .)
 modelAll <- lm(fmAll, data = mtcars)
 ```
 
+*******************************************************************************
 
 ### Appendix
 
-```{r plot1, echo=FALSE}
+
+```{r plot1, echo=FALSE, fig.width=4, fig.height=4, fig.align='center'}
 ggplot(mtcars, aes(y = mpg, x = transmission)) +
     geom_boxplot(aes(fill = transmission)) +
-    geom_jitter(aes(size = mpg), alpha = 0.5) +
-    labs(title = "Figure 1")
+    geom_jitter(aes(size = mpg), alpha = 0.5)
 ```
+**Figure 1:** Box plot showing distribution of MPG values in manual vs.
+automatic transmission cars. Points are also scaled according to MPG value
+for emphasis.  
 
-
-```{r plot2, echo=FALSE}
+  
+```{r plot2, echo=FALSE, fig.align='center'}
 mtcars_long <- melt(mtcars, id.vars = c("transmission", "mpg"))
 
 ggplot(mtcars_long, aes(y = value, x = transmission)) +
     geom_boxplot(aes(fill = transmission)) +
     geom_jitter(aes(size = mpg), alpha = 0.5) +
     scale_x_discrete(breaks = NULL) +
-    facet_wrap(~ variable, scales = "free_y", nrow = 2) +
-    labs(title = "Figure 2")
+    facet_wrap(~ variable, scales = "free_y", nrow = 2)
 ```
+**Figure 2:** Box plots showing distributions of all attribute values in manual
+vs. automatic transmission cars. Points are again scaled according to MPG value
+to simultaneously highlight these distributions. 
+  
 
-```{r resid1, echo=FALSE}
+```{r resid1, echo=FALSE, fig.width=5, fig.height=4, fig.align='center'}
 residPred <- data.frame(residuals = residuals(model2), yhat = predict(model2))
 
 ggplot(residPred, aes(x = yhat, y = residuals)) +
@@ -143,11 +154,14 @@ ggplot(residPred, aes(x = yhat, y = residuals)) +
     xlab("Fitted values") +
     ylab("Residuals") +
     geom_hline(yintercept = 0) +
-    geom_smooth(method = "loess") +
-    labs(title = "Figure 3")
+    geom_smooth(method = "loess")
 ```
+**Figure 3:** Residuals plot for model of `mpg ~ transmission + drat + wt + gear`
+(independent variable: MPG; dependent variables: transmission type and 
+variables with which it is correlated).    
+  
 
-```{r resid2, echo=FALSE}
+```{r resid2, echo=FALSE, fig.width=4, fig.height=4, fig.align='center'}
 residPred <- data.frame(residuals = residuals(modelAll), 
                         yhat = predict(modelAll))
 
@@ -156,7 +170,8 @@ ggplot(residPred, aes(x = yhat, y = residuals)) +
     xlab("Fitted values") +
     ylab("Residuals") +
     geom_hline(yintercept = 0) +
-    geom_smooth(method = "loess") +
-    labs(title = "Figure 3")
+    geom_smooth(method = "loess")
 ```
+**Figure 4:** Residuals plot for model of `mpg ~ .` (independent variable: MPG; 
+dependent variables: all other variables in the `mtcars` data set).  
 
