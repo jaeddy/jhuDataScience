@@ -5,12 +5,31 @@ date: "September 20, 2014"
 output: html_document
 ---
 
-###Summary
+### Summary
 
-The objective of this project was to...
+The objective of this project was to predict "classes" of exercise performance
+(correct: class `A`, or 1 of 4 common mistakes: class `B-E`) for subjects 
+performing barbell lifts. A random forest model was trained on 13 variables in
+the data (selected based on "importance" in training the classifier), and this
+model performed exceptionally well on classifiying subjects in the independent
+test data.
+\  
 
+#### Packages used
 
-```{r download_data}
+```{r load_libraries, message=FALSE}
+library(caret)
+library(randomForest)
+library(dplyr)
+```
+\  
+
+### Accessing & loading the data
+
+The training and testing CSV data files were downloaded directly from the 
+provided links. Both files were saved in the `data` directory.
+
+```{r download_data, cache=TRUE}
 # Create new directory to store data
 if (!file.exists("data/")) {
     dir.create("data/")
@@ -30,5 +49,157 @@ download.file(testAddress, "data/pmlTesting.csv", method = "curl")
 # Record the date of data access
 downloadDate <- date()
 ```
+\  
 
+For the analysis and results presented in this report, the data used was 
+accessed and downloaded on **`r downloadDate`**. After loading the data into `R`, 
+I used the `str()` function to inspect the variables in the training data.
+
+```{r load_data, results='hide'}
+# Load the data
+training <- read.csv("data/pmlTraining.csv")
+testing <- read.csv("data/pmlTesting.csv")
+
+# Inspect the training data
+str(training)
+```
+\  
+
+### Cleaning the data
+
+The output of `str()` (and visually inspecting the training data with `View()` 
+highlighted that a number of variables included many missing values or NAs. To 
+simplify classifier training and ease computation for more complex machine 
+learning algorithms, I chose to remove these variables, as well as any with 
+near-zero-variance, as identified with the `nearZeroVar()` function. I also 
+removed any variables pertaining to more record-keeping type information about 
+the measurements (e.g., entry number, user name, time of recording), rather 
+than actual measurement values. These variables shouldn't correspond to class,
+and might not even be available for all future samples, and therefore would not
+be helpful for training classifiers. The one exception to this logic is the
+variable `X`, which is essentially just the entry or row number; this variable
+is clearly correlated with class (as the rows are not randomized in any way), 
+but has no real relationship with exercise performance. The reduced training
+data was stored in the `trainingComplete` object.
+
+```{r clean_data, cache=TRUE}
+# Drop non-measurement columns
+training <- training %>%
+    select(-X, -user_name, -raw_timestamp_part_1, -raw_timestamp_part_2,
+           -cvtd_timestamp, -new_window, -num_window)
+
+# Drop any variables with missing values, NAs, or near-zero variance
+missingVars <- (colSums(is.na(training) | training == "") != 0)
+missingIdx <- seq(1, ncol(training), 1)[missingVars]
+nzv <- nearZeroVar(training)
+trainingComplete <- training[, -union(missingIdx, nzv)]
+```
+\  
+
+### Selecting a model
+
+I first partitioned the training data into smaller training (70% of samples)
+and test (30% of samples) sets for building and testing models. I built a
+random forest classifier using the `subTrain` data and evaluated the accuracy
+of this model on `subTest` sample classes. Note: the `set.seed()` function was
+used to help make the analysis reproducible.
+
+```{r train_submodel, cache=TRUE}
+set.seed(1234)
+inTrain = createDataPartition(trainingComplete$classe, p = 0.7)[[1]]
+subTrain <- trainingComplete[inTrain, ]
+subTest <- trainingComplete[-inTrain, ]
+
+rfModel <- randomForest(classe ~ ., data = subTrain, importance = TRUE)
+classePred <- predict(rfModel, newdata = subTest)
+confusionMatrix(data = classePred, reference = subTest$classe)
+```
+\  
+
+With default parameters, the random forest classifier trained with 500 trees
+achieved over **99%** accuracy when predicting exercise class in of `subTest` 
+samples. In the hopes of building a more parsimonious classifier (and reducing
+computational time), I examined the relative importance of all variables, as
+measured during the random forest training procedure. As shown in the
+histogram below, there is a rational separation in variable importance for a
+value of around **250** for mean decrease in Gini coefficient. 
+
+```{r inspect_vars, fig.align='center'}
+varImportance <- as.data.frame(importance(rfModel))
+varImportance %>%
+    ggplot(aes(x = MeanDecreaseGini)) +
+    geom_histogram(binwidth = 20, fill = "#56B4E9") +
+    geom_vline(xintercept = 250, colour = "#E69F00", size = 1.5,
+               linetype = "longdash") +
+    ylab("Number of variables")
+
+importantVars <- row.names(varImportance)[varImportance$MeanDecreaseGini > 250]
+```
+\  
+
+When I trained a new classifier using only the top **13** variables (those with 
+Gini decrease > 250), accuracy was still very high, with a significant drop
+in computation time.
+
+```{r retrain_submodel, cache=TRUE}
+rfModelImp <- randomForest(classe ~ ., 
+                        data = subTrain[, names(subTrain) %in%
+                                            c(importantVars, "classe")])
+classePred <- predict(rfModelImp, newdata = subTest)
+confusionMatrix(data = classePred, reference = subTest$classe)
+```
+\  
+
+### Evaluating the model
+
+To estimate the potential out-of-sample error with the chosen random forest
+classifier, I used a 10-fold cross-validation procedure and calculated the mean
+classification accuracy on test samples across all folds. As the 13 important
+variables used to train classifiers were learned from the `subTrain` samples,
+I used only the `subTest` samples for cross validation.
+
+```{r evaluate_model, cache=TRUE}
+nFolds <- 10
+cvFolds <- createFolds(subTest$classe, k = nFolds)
+foldAcc <- rep(0, nFolds)
+
+for (fold in 1:nFolds) {
+    foldTrain <- subTest[-cvFolds[[fold]],
+                                 names(subTest) %in%
+                                     c(importantVars, "classe")]
+    foldTest <- subTest[cvFolds[[fold]], ]
+    
+    foldModel <- randomForest(classe ~., data = foldTrain)
+    classePred <- predict(foldModel, newdata = foldTest)
+    
+    foldAcc[fold] <- confusionMatrix(data = classePred,
+                                     reference = foldTest$classe)$overall[1]
+}
+```
+
+The cross-validation accuracy achieved with a random forest classifier trained
+on the most important variables was **`r mean(foldAcc)`**, suggesting potentially
+good performance on new samples.  
+\  
+
+### Training & validating final classifier
+
+Finally, I used all samples in the training data with the 13 important 
+variables to train my final classification model.
+
+```{r build_full_model}
+trainingImportant <- trainingComplete[, names(trainingComplete) %in%
+                                          c(importantVars, "classe")]
+rfModel <- randomForest(classe ~ ., data = trainingImportant)
+```
+\  
+
+To evaluate the performance of this model, I submitted predictions for exercise
+classes in the `testing` data to the course website. My classifier correctly
+predicted **20/20** test sample classes, for 100% accuracy.
+
+```{r validate_model}
+# Predict classes in the test data
+testPred <- as.character(predict(rfModel, newdata = testing))
+```
 

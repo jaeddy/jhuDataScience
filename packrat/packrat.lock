@@ -13,6 +13,11 @@ Source: CRAN
 Version: 1.54.0-4
 Hash: 240790420ebcf7321eed885d421a8335
 
+Package: bitops
+Source: CRAN
+Version: 1.0-6
+Hash: cb26464a8321628636b547518994c931
+
 Package: BradleyTerry2
 Source: CRAN
 Version: 1.0-5
@@ -35,6 +40,12 @@ Source: CRAN
 Version: 6.0-35
 Hash: 5c4d66c4fa32246ee9b431abe6a5a4a4
 Requires: BradleyTerry2, car, foreach, ggplot2, plyr, reshape2
+
+Package: caTools
+Source: CRAN
+Version: 1.17.1
+Hash: bb5fdc266f716b8a289a4f92007d53e3
+Requires: bitops
 
 Package: colorspace
 Source: CRAN
@@ -233,13 +244,13 @@ Requires: plyr, Rcpp, stringr
 
 Package: rmarkdown
 Source: github
-Version: 0.2.50
-Hash: 70532694ec7c25cb9a5b767ab4e74787f80d0cc5
-Requires: htmltools, knitr, yaml
+Version: 0.3.3
+Hash: fd8dafdea0b4cc68b9dc3da0557a506e60e77ee2
+Requires: caTools, htmltools, knitr, yaml
 GithubRepo: rmarkdown
 GithubUsername: rstudio
-GithubRef: master
-GithubSha1: 70532694ec7c25cb9a5b767ab4e74787f80d0cc5
+GithubRef: v0.98.1000
+GithubSha1: fd8dafdea0b4cc68b9dc3da0557a506e60e77ee2
 
 Package: scales
 Source: CRAN
