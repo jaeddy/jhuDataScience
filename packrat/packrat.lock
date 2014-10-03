@@ -18,6 +18,11 @@ Source: CRAN
 Version: 1.0-6
 Hash: cb26464a8321628636b547518994c931
 
+Package: car
+Source: CRAN
+Version: 2.0-21
+Hash: 2c8213a71f5ef3514f22e6e7a52ebd19
+
 Package: colorspace
 Source: CRAN
 Version: 1.2-4
