@@ -20,8 +20,9 @@ manipulate(myPlot(s), x.s = slider(0, 2, step = 0.1))
 # sortable and searchable data table for the airquality data set? Assume the
 # rCharts package and the airquality data set have already been loaded into R.
 data(airquality)
+library(rCharts)
 
-dTable(airquality, sPaginationType = "full_numbers")
+dTable(airquality, sPaginationType = "full_numbers") # <<<
 d <- data.frame(airquality, stringsAsFactors = FALSE) print(d)
 airquality
 head(airquality)
