@@ -3,7 +3,7 @@
 # shower does what?
 
 # > It changes nothing.
-# > It changes the html5 framework thus changing the style of the slides.
+# > It changes the html5 framework thus changing the style of the slides. <<<
 # > It changes whether the document is self contained or requires being 
 # connected to the internet.
 # > It changes the ability to display mathjax javascript rendering.
@@ -45,7 +45,7 @@ summary(fit)
 
 # > Creates HTML5 slides using a generalized markdown format having an extention
 # Rpres and creates reproducible presentations by embedding and running the R 
-# code from within the presentation document.
+# code from within the presentation document. <<<
 # > Creates presentable R code from within presentations. However, it does not
 # actually run the code.
 # > Creates a presentation that can only be run from within Rstudio.
@@ -57,7 +57,7 @@ summary(fit)
 # what option do you need to add to the {r} options?
 
 # results = 'hide'
-# eval = FALSE
+# eval = FALSE <<<
 # echo = FALSE
 # run = FALSE
 
