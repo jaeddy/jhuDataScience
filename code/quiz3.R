@@ -3,7 +3,7 @@
 # R CMD check without any warnings or errors?
 
 # unit tests
-# DESCRIPTION file
+# DESCRIPTION file # <<<
 # a demo directory
 # example data sets
 
@@ -11,7 +11,7 @@
 # Question 2: Which of the following is a generic function in a fresh
 # installation of R, with only the default packages loaded?
 
-colSums
+colSums # <<<
 dgamma
 lm
 show
@@ -20,7 +20,7 @@ show
 # Question 3: What function is used to obtain the function body for an S4 method function?
 
 getS3method()
-getMethod()
+getMethod() # <<<
 showMethods()
 getClass()
 
@@ -29,9 +29,9 @@ getClass()
 # deploy an R function on yhat?
 
 model.load
-model.transform
+model.transform # <<<
 model.require
-model.predict
+model.predict # <<<
 
 
 # Question 5: Please download the R package DDPQuiz3 from the course web site.
@@ -41,7 +41,7 @@ model.predict
 
 #' This function calculates the mean
 #' 
-#' @param x is a numeric vector
+#' @param x is a numeric vector  # <<<
 #' @return the mean of x
 #' @export
 #' @examples 

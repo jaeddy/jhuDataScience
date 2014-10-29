@@ -12,6 +12,12 @@ Source: CRAN
 Version: 1.0-6
 Hash: cb26464a8321628636b547518994c931
 
+Package: caTools
+Source: CRAN
+Version: 1.17.1
+Hash: bb5fdc266f716b8a289a4f92007d53e3
+Requires: bitops
+
 Package: devtools
 Source: CRAN
 Version: 1.6
@@ -39,6 +45,12 @@ Package: highr
 Source: CRAN
 Version: 0.3
 Hash: 7c85a9b7d07a75e2d8ca74f9467fee21
+
+Package: htmltools
+Source: CRAN
+Version: 0.2.6
+Hash: 2c87108d130de261ac3c468d3316ae42
+Requires: digest
 
 Package: httr
 Source: CRAN
@@ -110,6 +122,16 @@ Package: RJSONIO
 Source: CRAN
 Version: 1.3-0
 Hash: 8b1341dfd547c90ed4b3365d5aa46a7b
+
+Package: rmarkdown
+Source: github
+Version: 0.3.3
+Hash: fd8dafdea0b4cc68b9dc3da0557a506e60e77ee2
+Requires: caTools, htmltools, knitr, yaml
+GithubRepo: rmarkdown
+GithubUsername: rstudio
+GithubRef: v0.98.1000
+GithubSha1: fd8dafdea0b4cc68b9dc3da0557a506e60e77ee2
 
 Package: rstudioapi
 Source: CRAN
