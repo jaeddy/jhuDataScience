@@ -1,0 +1,326 @@
+---
+output:
+  html_document:
+    theme: spacelab
+---
+Peer Assessment 2: NOAA Storm Database Exploration
+========================================================
+
+**Synopsis:** The analysis below was designed to explore data from the NOAA 
+Storm Database, with the goal of identifying severe weather event types that 
+are particularly damaging to population health or that have the greatest 
+economic consequences. The data were first downloaded, loaded into R, and then
+processed to enable more focused examination of weather events that cause the 
+most damage. Population health damage was defined as the sum of fatalities and
+injuries for any specific event; economic damage was defined as the sum of
+property damage and crop damage.
+
+After using exploratory plotting to inspect the distribution of health or
+economic damage for different event types, types were summarized according to
+either the mean or sum of all damage caused. Finally, two tables were created 
+to report the 10 worst event types in terms of (1) average damage to population
+health; and (2) total damage to population health. Two similar tables were
+created to report the 10 worst event types for (1) average economic damage; and
+(2) total economic damage.
+
+Further documentation on the NOAA storm data can be found at the links below:
+
+* National Weather Service [Storm Data Documentation](https://d396qusza40orc.cloudfront.net/repdata%2Fpeer2_doc%2Fpd01016005curr.pdf)
+* National Climatic Data Center Storm Events [FAQ](https://d396qusza40orc.cloudfront.net/repdata%2Fpeer2_doc%2FNCDC%20Storm%20Events-FAQ%20Page.pdf)
+
+\  
+
+## Data Processing
+
+The data was downloaded directly from the web and uncompressed from the `.bz2`
+format using the `bunzip2()` function in the `R.utils` package. The resulting
+`.csv` file was stored in the `data/` directory.
+
+```{r dataDownload, cache = TRUE}
+# Create a directory to store data, if one doesn't already exist
+if (!file.exists("data/")) {dir.create("data/")}
+
+# Download the data and record the date downloaded
+fileAddress <- 
+    "https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2"
+download.file(url = fileAddress, dest = "data/StormData.csv.bz2", 
+              method = "curl")
+dateDownloaded <- date()
+
+# Bunzip the file using 'bunzip2' from the 'R.utils' package
+library(R.utils)
+bunzip2(filename = "data/StormData.csv.bz2", destname = "data/StormData.csv",
+        overwrite = TRUE)
+```
+  
+**Note:** the data was downloaded from `r fileAddress` on `r dateDownloaded`.  
+
+\  
+
+After downloading an unzipping the data file, the data was read into R using 
+the `read.csv()` function. The structure of the resulting data frame `stormDat` 
+was examined using the `str()` function.
+
+```{r dataLoad, cache = TRUE}
+# Load the data using 'read.csv' and create the data frame 'stormDat'
+stormDat <- read.csv("data/StormData.csv")
+
+# Examine the structure of the data frame
+str(stormDat)
+```
+
+\  
+
+The `EVTYPE` variable in `stormDat` was found to have 
+`r nlevels(stormDat$EVTYPE)` unique levels, in contrast to the 48 event types
+described in the data documentation. Manual inspection of the levels revealed
+that different event labels were largely produced by formatting and spelling
+errors or discrepancies. The `gsub()` function was subsequently used to _clean_
+the event labels and reduce spurrious differences. **Note:** the `gsub()` 
+function searches for a specified query pattern and replaces any matches with 
+the specified replacement string.
+
+```{r dataClean, cache = TRUE}
+# Create a character vector with all event type labels
+eventTypes <- as.character(stormDat$EVTYPE)
+
+# Convert all labels to lower case
+eventTypes <- tolower(eventTypes)
+
+# Correct typos and abbreviations
+eventTypes <- gsub("avalance", "avalanche", eventTypes)
+eventTypes <- gsub("tstm", "thunderstorm", eventTypes)
+eventTypes <- gsub("sml", "small", eventTypes)
+eventTypes <- gsub("fld", "flood", eventTypes)
+
+# Remove different qualifiers and variations of major event types
+eventTypes <- gsub("^(.*)flash flood(.*)$", "flash flood", eventTypes)
+eventTypes <- gsub("^(.*)hurricane(.*)$", "hurricane", eventTypes)
+eventTypes <- gsub("^(.*)tropical storm(.*)$", "tropical storm", eventTypes)
+eventTypes <- gsub("^(.*)tornado(.*)$", "tornado", eventTypes)
+eventTypes <- gsub("^(.*)thunderstorm(.*)$", "thunderstorm", eventTypes)
+eventTypes <- gsub("g[[:digit:]]+", "", eventTypes)
+eventTypes <- gsub("(excessive|record|extreme)", "", eventTypes)
+
+# Remove smaller variations such as trailing 's's or 'ing's
+eventTypes <- gsub("(s)+$", "", eventTypes)
+eventTypes <- gsub("s(/|\\s)", "/", eventTypes)
+eventTypes <- gsub("[^lightn]ing$", "", eventTypes)
+
+# Remove any spaces and special characters
+eventTypes <- gsub("[^[:alpha:]]", "", eventTypes)
+
+# Add the new list of event labels as a variable in 'stormDat'
+stormDat$eventType <- factor(eventTypes)
+```
+
+\  
+
+The resulting list of event types in `eventType` contains 
+`r nlevels(stormDat$eventType)` levels, which is still far greater than 48. 
+However, further improvement would require extensive manual curation and time.
+As many entries in `stormDat` and their corresponding event type labels will be
+removed in subsquent processing steps, this preliminary step of semi-automated
+cleaning was deemed sufficient.
+
+The data was next processed to facilitate analysis for the questions below. 
+Specifically, entries were filtered according to the amount of damage to 
+population health (measured by the sum of `FATALITIES` and `INJURIES`) or by
+the amount of economic damage (detailed in `PROPDMG`, `PROPDMGEXP`, 
+`CROPDMG`, and `CROPDMGEXP`). Only the top 1% of event entries were kept for
+either category.
+
+```{r dataProcess, cache = TRUE}
+# Summarize population health damage as the sum of fatalities and injuries
+healthDmg <- stormDat$FATALITIES + stormDat$INJURIES
+stormDat$HEALTHDMG <- healthDmg
+
+# Calculate the 99th percentile of health damage numbers
+highHlthDmg <- quantile(healthDmg, c(.99), na.rm = TRUE)
+
+# Summarizing the economic damage is more complicated, and requires a simple 
+# function to convert the combination of 'DMG' (amount) and 'DMGEXP' 
+# (exponent of 10) to the total amount 'prod' (amount * 10^exponent); 'expKey'
+# is a named vector to keep track of the conversion from 'DMGEXP' labels to
+# actual exponent
+expKey <- c("0" = 0, "1" = 1, "h" = 2, "2" = 2, "k" = 3, "3" = 3, "4" = 4,
+             "5" = 5, "m" = 6, "6" = 6, "7" = 7, "8" = 8, "b" = 9)
+
+expCalc <- function(amt, exp) {
+    exp <- tolower(as.character(exp))
+    if (exp %in% names(expKey)) {
+        prod <- amt * 10^expKey[names(expKey) %in% exp]    
+    } else {
+        prod <- 0
+    }
+    prod
+}
+
+# Use 'expCalc' to calculate the total property damage for all events
+propDmg <- vector("numeric", nrow(stormDat))
+for (i in 1:length(propDmg)) {
+    propDmg[i] <- expCalc(stormDat[i, "PROPDMG"], stormDat[i, "PROPDMGEXP"])
+}
+
+# Use 'expCalc' to calculate the total crop damage for all events
+cropDmg <- vector("numeric", nrow(stormDat))
+for (i in 1:length(cropDmg)) {
+    cropDmg[i] <- expCalc(stormDat[i, "CROPDMG"], stormDat[i, "CROPDMGEXP"])
+}
+
+# Summarize economic damage as the sum of property and crop damage
+econDmg <- propDmg + cropDmg
+stormDat$ECONDMG <- econDmg
+
+# Calculate the 99th percentile of economic damage numbers
+highEconDmg <- quantile(econDmg, c(.99), na.rm = TRUE)
+
+# Create a smaller data frame containing only those events with high damage to
+# population health
+stormDatHealthDmg <- stormDat[healthDmg > highHlthDmg, ]
+
+# Create a smaller data frame containing only those events with high economic
+# damage
+stormDatEconDmg <- stormDat[econDmg > highEconDmg, ]
+```
+
+\  
+
+After restricting to the highest (99th) percentile of damage to population
+health and economic damage, the analyses below were reduced to comparisons
+among `r length(unique(as.character(stormDatHealthDmg$eventType)))` and 
+`r length(unique(as.character(stormDatEconDmg$eventType)))` different event
+types, respectively.
+
+\  
+
+## Exploratory Analysis
+
+The data was initially inspected using basic plotting. Specifically, the
+`ggplot2` package was used to create box plots for both health and economic
+damage, showing the distribution of values for each event type.
+
+```{r dataBoxPlot1, fig.width = 8}
+library(ggplot2)
+ggplot(stormDatHealthDmg,
+       aes(x = eventType, y = log10(HEALTHDMG))) + 
+    geom_boxplot(fill = "#E69F00") + 
+    xlab("Event Type") + ylab("log10(Fatalities + Injuries)") +
+    theme(axis.text.x = element_blank())
+```
+
+**Figure 1:** Distribution of damage to population health (fatalities + injuries) 
+for each event type.
+
+\  
+
+```{r dataBoxPlot2, fig.width = 8}
+ggplot(stormDatEconDmg, 
+       aes(x = eventType, y = log10(ECONDMG))) + 
+    geom_boxplot(fill = "#E69F00") + 
+    xlab("Event Type") + ylab("log10(Property + Crop Damages)") +
+    theme(axis.text.x = element_blank())
+```
+
+**Figure 2:** Distribution of economic damage (property + crop) 
+for each event type.
+
+\  
+
+With both types of damage (health or economic), it is clear that some events
+cause a large amount of damage on average, while others have many _outlier_
+points that may indicate a larger total amount of damage.
+
+\  
+
+## Results
+
+#### Analysis Aims
+
+The questions to be answered with the data were as follows:
+
+> Across the United States, which types of events (as indicated in the `EVTYPE` 
+> variable) are most harmful with respect to population health?
+> 
+> Across the United States, which types of events have the greatest economic 
+> consequences?
+
+\  
+
+#### Summarizing the Data: Mean and Total Damage
+
+In the explortatory analysis, it was observed from plotting that some event 
+types are associated with a large amount of damage on average, while others 
+lead to a higher total amount of damage. Given this observation, the data was
+reorganized and summarized according to these two statistics (**mean** and
+**sum**) using the `ddply()` function from the `plyr` package.
+
+```{r dmgStats}
+library(plyr)
+stormDatHealthStats <- ddply(stormDatHealthDmg, ~ eventType, summarize,
+                             meanHealthDmg = mean(HEALTHDMG),
+                             totalHealthDmg = sum(HEALTHDMG))
+
+stormDatEconStats <- ddply(stormDatEconDmg, ~ eventType, summarize,
+                           meanEconDmg = mean(ECONDMG),
+                           totalEconDmg = sum(ECONDMG))
+```
+
+\  
+
+The new data frames created with `ddply()` report the mean and total amount of
+damage for all events across each event type. A new data frame was created for
+both health and economic damage.
+
+\  
+
+#### Most Harmful Event Types with respect to Population Health
+
+Finally, the `arrange()` function was used to order the event types according
+to either the mean or total amount of damage caused to population health. The
+top 10 event types were then reported for each statistic using the `head()`
+function.
+
+```{r healthSummary}
+stormDatHealthMean <- head(arrange(stormDatHealthStats, 
+                                   stormDatHealthStats$meanHealthDmg,
+                                   decreasing = TRUE), 10)
+stormDatHealthMean
+
+stormDatHealthTotal <- head(arrange(stormDatHealthStats, 
+                                   stormDatHealthStats$totalHealthDmg, 
+                                   decreasing = TRUE), 10)
+stormDatHealthTotal
+```
+
+\  
+
+The event type that causes the most damage to population health on average is
+**`r stormDatHealthMean[1, 1]`**, while the event type that caused the greatest
+total amount of damage is **`r stormDatHealthTotal[1, 1]`**.
+
+\  
+
+#### Most Harmful Event Types with respect to Economic Consequences
+
+Again, the `arrange()` function was used to order the event types according
+to either the mean or total amount of economic damage caused. The top 10 event 
+types were then reported for each statistic using the `head()` function.
+
+```{r econSummary}
+stormDatEconMean <- head(arrange(stormDatEconStats, 
+                                   stormDatEconStats$meanEconDmg,
+                                   decreasing = TRUE), 10)
+stormDatEconMean
+
+stormDatEconTotal <- head(arrange(stormDatEconStats, 
+                                   stormDatEconStats$totalEconDmg, 
+                                   decreasing = TRUE), 10)
+stormDatEconTotal
+```
+
+\  
+
+The event type that causes the most economic damage average is
+**`r stormDatEconMean[1, 1]`**, while the event type that caused the greatest
+total amount of economic damage is **`r stormDatEconTotal[1, 1]`**.
