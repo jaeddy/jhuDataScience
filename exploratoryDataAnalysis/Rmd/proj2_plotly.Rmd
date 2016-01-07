@@ -1,0 +1,308 @@
+---
+title: "EDA Project 2 with Plotly"
+author: "James Eddy"
+date: "January 6, 2016"
+output: html_document
+---
+
+```{r}
+knitr::opts_chunk$set(fig.width=7, fig.height=5, fig.align='center',
+                      echo=TRUE, warning=FALSE, message=FALSE)
+knitr::opts_knit$set(root.dir = "..")
+```
+
+
+### Load required packages
+```{r}
+library(dplyr)
+library(ggplot2)
+library(plotly)
+```
+
+### Get & set up data
+
+```{r}
+# Create a directory to store data, if one doesn't already exist
+if (!file.exists("data/")) {
+    dir.create("data/")
+}
+
+# Download the data from the web and record the date and time
+if (!file.exists("data/FNEI_data.zip")) {
+    fileAddress <- paste0("https://d396qusza40orc.cloudfront.net/",
+                          "exdata%2Fdata%2FNEI_data.zip")
+    
+    download.file(fileAddress, "data/FNEI_data.zip", 
+                  method = "curl")
+    dateDownloaded <- date()
+    
+    file.create("data/dateDownloaded.txt")
+    con <- file("data/dateDownloaded.txt")
+    writeChar(dateDownloaded, con)
+    close(con)
+}
+
+# Unzip the data file
+if (!file.exists("data/Source_Classification_Code.rds")) {
+    unzip(zipfile = "data/FNEI_data.zip", exdir = "data/")
+}
+```
+
+
+### Load the data
+
+```{r, cache=TRUE}
+NEI <- readRDS("data/summarySCC_PM25.rds")
+SCC <- readRDS("data/Source_Classification_Code.rds")
+```
+
+### Question 1
+
+Have total emissions from PM2.5 decreased in the United States from 1999
+to 2008? Using the base plotting system, make a plot showing the total PM2.5
+emission from all sources for each of the years 1999, 2002, 2005, and 2008.
+
+```{r}
+# Use dplyr functions to sum the emission across all sources for each year
+annualEmissions <- NEI %>% 
+    group_by(year) %>% 
+    summarise(num_Observations = length(Emissions),
+              Emissions = sum(Emissions))
+```
+
+```{r}
+# Create a basic scatter plot of total emissions vs. year, with a dashed line
+# showing rough trend over time; also, plot the total number of observations
+# for each year
+par(mfrow = c(2, 1))
+with(annualEmissions, {
+    plot(year, Emissions, col = "blue", 
+         main = "Total emissions per year")
+    lines(year, Emissions, lty = 2)
+    plot(year, num_Observations, col = "blue", 
+         main = "Number of observations per year")
+    lines(year, num_Observations, lty = 2)
+})
+```
+
+In spite of the number of observations increasing each year (suggesting
+greater vigilance in monitoring emissions) from 1999 to 2008, the total 
+emissions have clearly decreased over this time period.
+
+### Question 2
+
+Have total emissions from PM2.5 decreased in the Baltimore City, Maryland
+(fips == "24510") from 1999 to 2008? Use the base plotting system to make a
+plot answering this question.
+
+```{r}
+# Use dplyr functions to sum the emission across all sources for each year,
+# this time filtering observations to only include Baltimore based on the
+# corresponding fips code
+bmoreAnnualEmissions <- NEI %>% 
+    filter(fips == "24510") %>% 
+    group_by(year) %>%
+    summarise(num_Observations = length(Emissions),
+              Emissions = sum(Emissions))
+```
+
+```{r}
+# Create a basic scatter plot of total emissions vs. year, with a dashed line
+# showing rough trend over time; also, plot the total number of observations
+# for each year
+par(mfrow = c(2, 1))
+with(bmoreAnnualEmissions, {
+    plot(year, Emissions, col = "blue", 
+         main = "Baltimore emissions per year")
+    lines(year, Emissions, lty = 2)
+    plot(year, num_Observations, col = "blue", 
+         main = "Number of observations per year")
+    lines(year, num_Observations, lty = 2)
+})
+```
+
+Again, while the number of source-emissions observations has increased each 
+year from 1999 to 2008, the total emissions have clearly decreased over the
+full span of this time period. Even though there appears to be an increase
+in total emissions from 2002 to 2005, the total for 2008 is still less than
+that of 1999.
+
+### Question 3
+
+Of the four types of sources indicated by the type (point, nonpoint, 
+onroad, nonroad) variable, which of these four sources have seen decreases 
+in emissions from 1999–2008 for Baltimore City? Which have seen increases in
+emissions from 1999–2008? Use the ggplot2 plotting system to make a plot
+answer this question.
+
+```{r}
+# First, filter observations to only include Baltimore based on the
+# corresponding fips code
+bmoreEmissions <- NEI %>% 
+    filter(fips == "24510") 
+```
+
+```{r}
+# Plot histogram of emissions values for Baltimore (not included in results)
+ggplot(bmoreEmissions, aes(Emissions)) +
+    geom_histogram()
+```
+
+The histogram shows that the distribution of emissions values is very heavy-
+tailed, suggesting that it would be useful to log-normalize the data
+
+```{r}
+# Use dplyr to do the following: (1) log-transform emissions values (after 
+# adding 1 to avoid -Inf values when transforming zeros); (2) calculate the 
+# total emissions for each year-type combination
+bmoreEmissionsSummary <- bmoreEmissions %>%
+    mutate(Emissions = log10(Emissions + 1)) %>%
+    group_by(year, type) %>%
+    mutate(total_Emissions = sum(Emissions))
+```
+
+```{r}
+# Create boxplots of the data, showing the median, 75th percentile, and 25th 
+# percentile for each year; fit a basic linear regression line to
+# estimate the trend; show each type of emission in a separate panel; scale the
+# fill color of boxes according to the total emissions
+ggplot(bmoreEmissionsSummary, aes(factor(year), Emissions)) +
+    geom_boxplot(aes(fill = total_Emissions), colour = "#E69F00") +
+    geom_smooth(method = "lm", aes(group = 1),
+                colour = "#D55E00", size = 2) + 
+    facet_wrap(~ type, scales = "free")
+```
+
+Based on the overall trends (as modeled by linear regression), each source
+type shows a decrease in emissions from 1999 to 2008. However, based on
+median emissions, the pattern is less consistent: (1) non-road sources show
+only a very modest decrease; non-point sources increase in 2002 and 2005 
+before decreasing in 2008; and point sources decrease, increase, and then
+decrease again. Based on total emissions, both non-point and point sources
+also seem to show a relative increase in 2008 compared to 1999. On-road
+sources are consistently decreased (albeit modestly) from 1999-2008 across
+all measures.
+
+
+### Question 4
+
+Across the United States, how have emissions from coal combustion-related
+sources changed from 1999–2008?
+
+```{r}
+# Use grep to identify all coal sources and subset the SCC table
+coalSources <- grep("coal", tolower(SCC$SCC.Level.Three))
+coalSCC <- SCC[coalSources, ]
+
+# Use dplyr to do the following: (1) filter observations to only include coal
+# sources; (2) log-transform emissions values (after adding 1 to avoid -Inf
+# values when transforming zeros); (3) calculate total emissions for each year
+coalEmissionsSummary <- NEI %>%
+    filter(SCC %in% coalSCC$SCC) %>%
+    mutate(Emissions = log10(Emissions + 1)) %>%
+    group_by(year) %>%
+    mutate(total_Emissions = sum(Emissions))
+```
+
+```{r}
+# Create boxplots of the data, showing the median, 75th percentile, and 25th 
+# percentile for each year; fit a basic linear regression line to estimate the
+# trend; scale the fill color of boxes according to the total emissions
+ggplot(coalEmissionsSummary, aes(factor(year), Emissions)) +
+    geom_boxplot(aes(fill = total_Emissions), colour = "#E69F00") + 
+    geom_smooth(method = "lm", aes(group = 1), 
+                colour = "#D55E00", size = 2)
+```
+
+Based on the overall trend (as modeled by linear regression), coal sources
+show a decrease in emissions from 1999 to 2008; this pattern is also 
+reflected by median emissions, which decrease or remain steady each observed
+year. Based on total emissions, there is an increase for the period of
+2002-2008 before decreasing in 2008.
+
+
+### Question 5
+
+How have emissions from motor vehicle sources changed from 1999–2008 in
+Baltimore City?
+
+```{r}
+# Use grep to identify all motor vehicle sources, as indicated by the term
+# "mobile," and subset the SCC table
+mobileSources <- grep("mobile", tolower(SCC$SCC.Level.One))
+mobileSCC <- SCC[mobileSources, ]
+
+# Use dplyr to do the following: (1) filter observations to only include mobile 
+# sources and observations in Baltimore (based on fips code); (2) log-transform
+# emissions values (after adding 1 to avoid -Inf values when transforming
+# zeros); (3) calculate total emissions for each year
+mobileBmoreEmissionsSummary <- NEI %>%
+    filter(SCC %in% mobileSCC$SCC, fips == "24510") %>%
+    mutate(Emissions = log10(Emissions + 1)) %>%
+    group_by(year) %>%
+    mutate(total_Emissions = sum(Emissions))
+```
+
+```{r}
+# Create boxplots of the data, showing the median, 75th percentile, and 25th 
+# percentile for each year; fit a basic linear regression line to estimate the
+# trend; scale the fill color of boxes according to the total emissions
+ggplot(mobileBmoreEmissionsSummary, aes(factor(year), Emissions)) +
+    geom_boxplot(aes(fill = total_Emissions), colour = "#E69F00") + 
+    geom_smooth(method = "lm", aes(group = 1), 
+                colour = "#D55E00", size = 2)
+```
+
+Based on the overall trend (as modeled by linear regression), motor vehicle 
+sources in Baltimore show a decrease in emissions from 1999 to 2008; this
+pattern is mostly reflected by median emissions, which decrease or remain
+steady each observed year. Total emissions also appear to decrease over time
+from 1999-2008.
+
+
+### Question 6
+
+Compare emissions from motor vehicle sources in Baltimore City with
+emissions from motor vehicle sources in Los Angeles County, California
+(fips == "06037"). Which city has seen greater changes over time in motor
+vehicle emissions?
+
+```{r}
+# Use grep to identify all motor vehicle sources, as indicated by the term
+# "mobile," and subset the SCC table
+mobileSources <- grep("mobile", tolower(SCC$SCC.Level.One))
+mobileSCC <- SCC[mobileSources, ]
+
+# Use dplyr to do the following: (1) filter observations to only include mobile 
+# sources and observations in Baltimore and Los Angeles County (based on fips
+# code); (2) log-transform emissions values (after adding 1 to avoid -Inf values
+# when transforming zeros); (3) calculate total emissions for each year-location
+# combination
+mobileEmissionsComp <- NEI %>%
+    filter(SCC %in% mobileSCC$SCC, fips %in% c("24510", "06037")) %>%
+    mutate(Emissions = log10(Emissions + 1)) %>%
+    group_by(year, fips) %>%
+    mutate(total_Emissions = sum(Emissions))
+```
+
+```{r}
+# Create boxplots of the data, showing the median, 75th percentile, and 25th 
+# percentile for each year; fit a basic linear regression line to estimate the 
+# trend; show each location in a separate pane; scale the fill color of boxes
+# according to the total emissions
+ggplot(mobileEmissionsComp, aes(factor(year), Emissions)) +
+    geom_boxplot(aes(fill = total_Emissions), colour = "#E69F00") + 
+    geom_smooth(method = "lm", aes(group = 1), 
+                colour = "#D55E00", size = 2) +
+    facet_wrap(~ fips, scales = "free")
+```
+
+Based on the overall trends (as modeled by linear regression), motor vehicle
+sources show a decrease in emissions from 1999 to 2008 for both Baltimore and
+Los Angeles County; this pattern is also reflected by median emissions, but
+more dramatically in Los Angeles, which has much higher emission levels than
+Baltimore in general. While the percent change in median emissions might be
+similar for both cities, Los Angeles clearly shows a greater "absolute" 
+decrease from 1999 to 2008. Interestingly, based on total emissions, there is
+an increase for the period of 2002-2008 in Los Angeles before decreasing in
+2008; total emissions in Baltimore are generally decreasing or steady.

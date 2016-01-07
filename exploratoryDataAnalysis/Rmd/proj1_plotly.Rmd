@@ -1,0 +1,190 @@
+---
+title: "EDA Project 1 with Plotly"
+author: "James Eddy"
+date: "January 6, 2016"
+output: html_document
+---
+
+```{r}
+knitr::opts_chunk$set(fig.width=7, fig.height=5, fig.align='center',
+                      echo=TRUE, warning=FALSE, message=FALSE)
+knitr::opts_knit$set(root.dir = "..")
+```
+
+### Load packages
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(lubridate)
+library(plotly)
+```
+
+\  
+
+### Get & set up data
+
+```{r}
+# Create a directory to store data, if one doesn't already exist
+if (!file.exists("data/")) {
+    dir.create("data/")
+}
+
+# Download the data from the web and record the date and time
+if (!file.exists("data/household_power_consumption.zip")) {
+    fileAddress <- paste0("https://d396qusza40orc.cloudfront.net/",
+                          "exdata%2Fdata%2Fhousehold_power_consumption.zip")
+    
+    download.file(fileAddress, "data/household_power_consumption.zip", 
+                  method = "curl")
+    dateDownloaded <- date()
+    
+    file.create("data/dateDownloaded.txt")
+    con <- file("data/dateDownloaded.txt")
+    writeChar(dateDownloaded, con)
+}
+
+# Unzip the data file
+if (!file.exists("data/household_power_consumption.txt")) {
+    unzip(zipfile = "data/household_power_consumption.zip", exdir = "data/")
+}
+```
+
+\  
+
+### Load the data
+
+```{r}
+# Preview the data using readLines() and the lubridate package to identify rows
+# corresponding to the target range of dates (1/2/2007 to 2/2/2007)
+
+# Note: the assignment description states that dates are found in the first 
+# column and formatted as "dd/mm/yyyy", but this can also be confirmed by 
+# reading and visually inspecting the first several lines
+con <- file("data/household_power_consumption.txt")
+for (n in seq(10000, 200000, 10000)) {
+    lines <- readLines(con, n)
+    lineParts <- strsplit(tail(lines, 1), ";")
+    lineDate <- dmy(unlist(lineParts)[1])
+    if (lineDate > dmy("2/2/2007")) {
+        break
+    }
+}
+startLine <- min(grep("1/2/2007", lines))
+endLine <- max(grep("2/2/2007", lines))
+close(con)
+
+# Load the data only up to the end of the desired range
+powerDat <- read.table("data/household_power_consumption.txt",
+                       nrows = endLine, sep = ";", header = TRUE,
+                       na.strings = c("?"))
+str(powerDat)
+```
+
+```{r}
+# Subset the data to only include the target date range
+powerDat <- powerDat[(startLine-1):endLine, ]
+
+# Convert the Date and Time variables into a new Date/Time class variable using
+# lubridate and dplyr
+powerDat <- mutate(powerDat, datetime = dmy_hms(paste(Date, Time)))
+```
+
+\  
+
+### Plot 1
+
+#### Base plotting
+
+```{r}
+# Make plot 1
+with(powerDat, hist(Global_active_power, col = "red", 
+                    xlab = "Global Active Power (kilowatts)",
+                    main = "Global Active Power"))
+```
+
+#### Plotly
+
+```{r}
+plot_ly(powerDat, x = Global_active_power, 
+        type = "histogram", nbinsx = 30) %>% 
+    layout(title = "Global Active Power",
+           xaxis = list(title = "Global Active Power (kilowatts)"),
+           yaxis = list(title = "Frequency"))
+```
+
+\  
+
+### Plot 2
+
+```{r}
+# Make plot 2
+par(bg = "transparent")
+with(powerDat, {
+    plot(datetime, Global_active_power,
+         type = "n",
+         ylab = "Global Active Power (kilowatts)",
+         xlab = "")
+    lines(datetime, Global_active_power)
+    })
+```
+
+\  
+
+### Plot 3
+
+```{r}
+# Make plot 3
+par(bg = "transparent")
+with(powerDat, {
+    plot(datetime, Sub_metering_1,
+         type = "n",
+         ylab = "Energy sub metering",
+         xlab = "")
+    lines(datetime, Sub_metering_1)
+    lines(datetime, Sub_metering_2, col = "red")
+    lines(datetime, Sub_metering_3, col = "blue")
+    legend("topright", lty = 1, col = c("black", "red", "blue"),
+           legend = c("Sub_metering_1", "Sub_metering_2", "Sub_metering_3"))
+})
+```
+
+\  
+
+### Plot 4
+
+```{r}
+# Make plot 4
+par(mfrow = c(2, 2), bg = "transparent")
+with(powerDat, {
+    # panel 1 (top left)
+    plot(datetime, Global_active_power,
+         type = "n",
+         ylab = "Global Active Power",
+         xlab = "")
+    lines(datetime, Global_active_power)
+    
+    # panel 2 (top right)
+    plot(datetime, Voltage,
+         type = "n",
+         ylab = "Voltage")
+    lines(datetime, Voltage)
+    
+    # panel 3 (bottom left)
+    plot(datetime, Sub_metering_1,
+         type = "n",
+         ylab = "Energy sub metering",
+         xlab = "")
+    lines(datetime, Sub_metering_1)
+    lines(datetime, Sub_metering_2, col = "red")
+    lines(datetime, Sub_metering_3, col = "blue")
+    legend("topright", bty = "n", lty = 1, col = c("black", "red", "blue"),
+           legend = c("Sub_metering_1", "Sub_metering_2", "Sub_metering_3"))
+    
+    # panel 4 (bottom right)
+    plot(datetime, Global_reactive_power,
+         type = "n")
+    lines(datetime, Global_reactive_power)
+})
+```
+
