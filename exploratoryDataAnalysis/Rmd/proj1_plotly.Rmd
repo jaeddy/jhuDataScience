@@ -6,7 +6,7 @@ output: html_document
 ---
 
 ```{r}
-knitr::opts_chunk$set(fig.width=7, fig.height=5, fig.align='center',
+knitr::opts_chunk$set(fig.width=7, fig.height=5, fig.align='left',
                       echo=TRUE, warning=FALSE, message=FALSE)
 knitr::opts_knit$set(root.dir = "..")
 ```
@@ -106,20 +106,41 @@ with(powerDat, hist(Global_active_power, col = "red",
 #### Plotly
 
 ```{r}
-plot_ly(powerDat, x = Global_active_power, 
-        type = "histogram", nbinsx = 30) %>% 
+powerDat %>% 
+plot_ly(x = Global_active_power, 
+        type = "histogram", autobinx = FALSE, 
+        xbins = list(start = 0, end = 8.5, size = 0.5)) %>% 
     layout(title = "Global Active Power",
            xaxis = list(title = "Global Active Power (kilowatts)"),
            yaxis = list(title = "Frequency"))
+```
+
+#### ggplot2
+
+```{r}
+p <- powerDat %>% 
+    ggplot(aes(x = Global_active_power)) +
+    geom_histogram(binwidth = 0.5) +
+    xlab("Global Active Power (kilowatts)") +
+    ylab("Frequency") +
+    ggtitle("Global Active Power")
+p
+```
+
+#### ggplotly
+
+```{r}
+ggplotly(p)
 ```
 
 \  
 
 ### Plot 2
 
+#### Base plotting
+
 ```{r}
 # Make plot 2
-par(bg = "transparent")
 with(powerDat, {
     plot(datetime, Global_active_power,
          type = "n",
@@ -128,6 +149,30 @@ with(powerDat, {
     lines(datetime, Global_active_power)
     })
 ```
+
+#### Plotly
+
+```{r}
+powerDat %>% 
+    plot_ly(x = datetime, y = Global_active_power)
+```
+
+#### ggplot2
+
+```{r}
+p <- powerDat %>% 
+    ggplot(aes(x = datetime, y = Global_active_power)) +
+    geom_line()
+p
+```
+
+#### ggplotly
+
+```{r}
+ggplotly(p)
+```
+
+
 
 \  
 
