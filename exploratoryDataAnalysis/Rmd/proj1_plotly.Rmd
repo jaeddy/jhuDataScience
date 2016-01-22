@@ -154,24 +154,34 @@ with(powerDat, {
 
 ```{r}
 powerDat %>% 
-    plot_ly(x = datetime, y = Global_active_power)
+    plot_ly(x = datetime, y = Global_active_power) %>% 
+    layout(yaxis = list(title = "Global Active Power (kilowatts)"),
+           xaxis = list(title = "",
+                        nticks = 3))
 ```
 
 #### ggplot2
 
 ```{r}
+lims <- c(powerDat$datetime[1], powerDat$datetime[length(powerDat$datetime)])
 p <- powerDat %>% 
     ggplot(aes(x = datetime, y = Global_active_power)) +
-    geom_line()
+    geom_line() +
+    xlab("") +
+    ylab("Global Active Power (kilowatts)") +
+    scale_x_datetime(date_breaks = "days",
+                     date_labels = "%A")
 p
 ```
 
 #### ggplotly
 
 ```{r}
-ggplotly(p)
+ggplotly(p) %>% 
+    layout(line = list(width = 0.5),
+           xaxis = list(title = "",
+                        nticks = 3))
 ```
-
 
 
 \  
