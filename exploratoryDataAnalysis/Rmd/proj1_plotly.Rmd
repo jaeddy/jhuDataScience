@@ -188,9 +188,10 @@ ggplotly(p) %>%
 
 ### Plot 3
 
+#### Base plotting
+
 ```{r}
 # Make plot 3
-par(bg = "transparent")
 with(powerDat, {
     plot(datetime, Sub_metering_1,
          type = "n",
@@ -204,9 +205,49 @@ with(powerDat, {
 })
 ```
 
+#### Plotly
+
+```{r}
+powerDat %>% 
+    plot_ly(x = datetime, y = Sub_metering_1, name = "Sub_metering_1") %>% 
+    layout(yaxis = list(title = "Energy sub metering"),
+           xaxis = list(title = "",
+                        nticks = 3),
+           legend = list(borderwidth = 1,
+                         xanchor = "right")) %>% 
+    add_trace(y = Sub_metering_2, name = "Sub_metering_2") %>% 
+    add_trace(y = Sub_metering_3, name = "Sub_metering_3")
+```
+
+#### ggplot2
+
+```{r}
+library(reshape2)
+p <- powerDat %>% 
+    melt(measure.vars = c("Sub_metering_1", "Sub_metering_2", "Sub_metering_3")) %>% 
+    ggplot(aes(x = datetime, y = value)) +
+    geom_line(aes(colour = variable)) +
+    xlab("") +
+    ylab("Energy sub metering") +
+    scale_x_datetime(date_breaks = "days",
+                     date_labels = "%A") +
+    scale_colour_discrete(guide = guide_legend(title = NULL)) +
+    theme(legend.justification = c(1, 1), legend.position = c(1, 1))
+p
+```
+
+#### ggplotly
+
+```{r}
+ggplotly(p)
+```
+
+
 \  
 
 ### Plot 4
+
+#### Base plotting
 
 ```{r}
 # Make plot 4
@@ -241,5 +282,34 @@ with(powerDat, {
          type = "n")
     lines(datetime, Global_reactive_power)
 })
+```
+
+#### Plotly
+
+```{r}
+powerDat %>% 
+    subplot(
+        plot_ly(., x = Global_active_power, 
+                type = "histogram", autobinx = FALSE, 
+                xbins = list(start = 0, end = 8.5, size = 0.5)) %>% 
+            layout(title = "Global Active Power",
+                   xaxis = list(title = "Global Active Power (kilowatts)"),
+                   yaxis = list(title = "Frequency")),
+        plot_ly(., x = datetime, y = Global_active_power) %>% 
+            layout(yaxis = list(title = "Global Active Power (kilowatts)"),
+                   xaxis = list(title = "",
+                                nticks = 3)),
+        plot_ly(., x = datetime, y = Sub_metering_1, name = "Sub_metering_1") %>% 
+            layout(yaxis = list(title = "Energy sub metering"),
+                   xaxis = list(title = "",
+                                nticks = 3),
+                   legend = list(borderwidth = 1,
+                                 xanchor = "right")) %>% 
+            add_trace(y = Sub_metering_2, name = "Sub_metering_2") %>% 
+            add_trace(y = Sub_metering_3, name = "Sub_metering_3"),
+        margin = 0.05,
+        nrows = 2
+    )
+
 ```
 
