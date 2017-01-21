@@ -52,7 +52,7 @@ if (!file.exists("data/Source_Classification_Code.rds")) {
 ### Load the data
 
 ```{r, cache=TRUE}
-NEI <- readRDS("data/summarySCC_PM25.rds")
+strNEI <- readRDS("data/summarySCC_PM25.rds")
 SCC <- readRDS("data/Source_Classification_Code.rds")
 ```
 

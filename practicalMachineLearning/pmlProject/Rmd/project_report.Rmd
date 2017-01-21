@@ -2,7 +2,7 @@
 title: "Practical Machine Learning Project"
 author: "James Eddy"
 date: "September 20, 2014"
-output: html_document
+output: pdf_document
 ---
 
 ### Summary
